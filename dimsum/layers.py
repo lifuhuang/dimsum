@@ -8,7 +8,7 @@ Created on Sat Apr 23 23:17:39 2016
 import itertools as it
 import numpy as np
 import initializations
-import nonlinearities
+import activations
 
 class Layer(object):
     """Base class for all kinds of layers.
@@ -82,23 +82,14 @@ class DenseLayer(Layer):
         self.param_shapes['%s_b' % self.name] = (fan_out,)
         
         # weight filler
-        if weight_filler in initializations.weight_fillers:
-            self._weight_filler = initializations.weight_fillers[weight_filler]
-        else:
-            raise ValueError('Unrecognized weight_filler: %s.' % weight_filler)
+        self._weight_filler = initializations.get_weight_filler(weight_filler)
             
         # bias filler
-        if bias_filler in initializations.bias_fillers:
-            self._bias_filler = initializations.bias_fillers[bias_filler]
-        else:
-            raise ValueError('Unrecognized bias_filler: %s.' % bias_filler)
+        self._bias_filler = initializations.get_bias_filler(bias_filler)
         
         # nonlinearity and derivative
-        if nonlinearity in nonlinearities.functions:  
-            self._nonlinearity = nonlinearities.functions[nonlinearity]
-            self._derivative = nonlinearities.derivatives[nonlinearity]
-        else:
-            raise ValueError('Unrecognized nonlinearity: %s.' % nonlinearity)
+        self._nonlinearity = activations.get_function(nonlinearity)
+        self._derivative = activations.get_derivative(nonlinearity)
         
         # cache of input/output
         self._input = None

@@ -20,14 +20,13 @@ class NeuralNetwork(object):
         self.grads = None
         
         self._layers = []
-        if objective in objectives.functions:
-            self._objective = objectives.functions[objective]
-            self._derivative = objectives.derivatives[objective]
-        elif callable(objective):
+        
+        if callable(objective):
             self._objective = objective
             self._derivative = derivative
         else:
-            raise ValueError('%s is not a valid objective' % objective)
+            self._objective = objectives.get_function(objective)
+            self._derivative = objectives.get_derivate(objective)
     
     def build(self):
         """Deploy the neural network and allocate memory to layers.

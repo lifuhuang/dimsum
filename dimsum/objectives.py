@@ -7,11 +7,25 @@ Created on Sat Apr 23 16:09:59 2016
 
 import numpy as np
 
-def cross_entropy_loss(output, target):
+def get_function(name):
+    """Return a objective function according to name.
+    """
+    if name not in _functions:
+        raise ValueError('%s is not a valid objective.' % name)
+    return _functions[name]
+
+def get_derivate(name):
+    """Return the derivative of objective function according to name.
+    """
+    if name not in _derivatives:
+        raise ValueError('%s is not a valid objective.' % name)
+    return _derivatives[name]
+    
+def _cross_entropy_loss(output, target):
     return -np.dot(target.T, np.log(output))
 
-def cross_entropy_derivative(output, target):
+def _cross_entropy_derivative(output, target):
     return -target / output
     
-functions = {'cross_entropy': cross_entropy_loss}
-derivatives = {'cross_entropy': cross_entropy_derivative}
+_functions = {'cross_entropy': _cross_entropy_loss}
+_derivatives = {'cross_entropy': _cross_entropy_derivative}
