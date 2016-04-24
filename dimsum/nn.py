@@ -3,9 +3,9 @@ import itertools as it
 
 import numpy as np
 
-import objectives
-from utils import ArrayPool
-from layers import Layer
+from .import objectives
+from .utils import ArrayPool
+from .layers import Layer
 
 class NeuralNetwork(object):
     """Base classes of all neural networks.
@@ -22,11 +22,11 @@ class NeuralNetwork(object):
         self._layers = []
         
         if callable(objective):
-            self._objective = objective
-            self._derivative = derivative
+            if not callable(derivative):
+                raise ValueError('No valid derivative is provided.')
+            self._objective, self._derivative = objective, derivative
         else:
-            self._objective = objectives.get_function(objective)
-            self._derivative = objectives.get_derivate(objective)
+            self._objective, self._derivative = objectives.get(objective)
     
     def build(self):
         """Deploy the neural network and allocate memory to layers.
@@ -64,6 +64,7 @@ class NeuralNetwork(object):
         
         self.grads.reset()
         self._acc_gradients(x, y)
+        success = True
         
         for name in self.params.names():
             if name in skiplist: 
@@ -84,8 +85,10 @@ class NeuralNetwork(object):
             grad_delta = np.linalg.norm(grad_approx - grad_computed)
             print >> outfd, "error norm = %.04g" % grad_delta,
             print >> outfd, ("[ok]" if grad_delta < tol else "[ERROR]")
+            success &= (grad_delta < tol)
                 
         self.grads.reset()
+        return success
         
     def _forward_propagate(self, message):
         msg = message

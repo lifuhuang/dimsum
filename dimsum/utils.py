@@ -8,6 +8,13 @@ Created on Sat Apr 23 16:07:39 2016
 import matplotlib.pyplot as plt 
 import numpy as np
 
+def softmax(x):
+    """Return the Softmax value of the array-like input.
+    """
+    
+    x_exp = np.exp(x - np.max(x, axis = -1, keepdims = True))
+    return x_exp / np.sum(x_exp, axis = -1, keepdims = True)
+
 def plot_matrix(x, **kwargs):
     """Plot the contour of a matrix.
     """
@@ -35,7 +42,7 @@ class ArrayPool(object):
         self._n_params = len(array_shapes)
         self._shapes = [array_shapes[name] for name in self._names]
         self._lens = map(np.prod, self._shapes)
-        self._ends = np.cumsum(np.concatenate(([0], self._lens))).tolist()
+        self._ends = np.cumsum(np.array([0] + self._lens)).tolist()
         self._vec = np.zeros(np.sum(self._lens))
         self._views = []
         for i, name in enumerate(self._names):

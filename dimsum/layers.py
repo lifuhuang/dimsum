@@ -6,9 +6,11 @@ Created on Sat Apr 23 23:17:39 2016
 """
 
 import itertools as it
+
 import numpy as np
-import initializations
-import activations
+
+from . import initializations
+from . import activations
 
 class Layer(object):
     """Base class for all kinds of layers.
@@ -61,8 +63,9 @@ class DenseLayer(Layer):
     """
     
     
-    def __init__(self, fan_in, fan_out, nonlinearity='logistic', 
-                 weight_filler='xavier', bias_filler='constant', **kwargs):
+    def __init__(self, fan_in, fan_out, 
+                 weight_filler='xavier', bias_filler='constant', 
+                 activation='logistic', derivative=None, **kwargs):
         """Initialize a new instance of DenseLayer.
         """
         
@@ -82,14 +85,24 @@ class DenseLayer(Layer):
         self.param_shapes['%s_b' % self.name] = (fan_out,)
         
         # weight filler
-        self._weight_filler = initializations.get_weight_filler(weight_filler)
+        if callable(weight_filler):
+            self._weight_filler = weight_filler
+        else:
+            self._weight_filler = initializations.get(weight_filler)
             
         # bias filler
-        self._bias_filler = initializations.get_bias_filler(bias_filler)
+        if callable(bias_filler):
+            self._bias_filler = bias_filler
+        else:
+            self._bias_filler = initializations.get(bias_filler)
         
         # nonlinearity and derivative
-        self._nonlinearity = activations.get_function(nonlinearity)
-        self._derivative = activations.get_derivative(nonlinearity)
+        if callable(activation):
+            if not callable(derivative):
+                raise ValueError('No valid derivative is provided.')
+            self._activation, self._derivative = activation, derivative
+        else:
+            self._activation, self._derivative = activations.get(activation)
         
         # cache of input/output
         self._input = None
@@ -108,7 +121,7 @@ class DenseLayer(Layer):
         """
         
         self._input = msg
-        self._output = self._nonlinearity(np.dot(msg, self.W) + self.b)
+        self._output = self._activation(np.dot(msg, self.W) + self.b)
         return self._output
         
     def back_propagate(self, msg):

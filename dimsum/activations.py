@@ -7,21 +7,15 @@ Created on Sat Apr 23 15:55:04 2016
 
 import numpy as np
 
-def get_function(name):
-    """Return an activation function according to name.
+from . import utils
+
+def get(name):
+    """Return an activation function and its derivative according to name.
     """
     
     if name not in _functions:
         raise ValueError('%s is not a valid activation function' % name)    
-    return _functions[name]
-
-def get_derivative(name):    
-    """Return the derivative of activation function according to name.
-    """
-    
-    if name not in _derivatives:
-        raise ValueError('%s is not a valid activation function' % name)
-    return _derivatives[name]
+    return _functions[name], _derivatives[name]
 
 def _identity(x):
     """Return the value unchanged."""
@@ -50,14 +44,13 @@ def _softmax(x):
     """Return the Softmax value of the array-like input.
     """
     
-    x_exp = np.exp(x - np.max(x, axis = -1, keepdims = True))
-    return x_exp / np.sum(x_exp, axis = -1, keepdims = True)
+    return utils.softmax(x)
 
 _functions = {'identity': _identity, 
-             'tanh': _tanh, 
-             'logistic': _logistic,
-             'relu': _relu,
-             'softmax': _softmax}
+              'tanh': _tanh, 
+              'logistic': _logistic,
+              'relu': _relu,
+              'softmax': _softmax}
 
 def _logistic_derivative(z):
     """Return the derivative of logistic function given its function output.
@@ -90,8 +83,8 @@ def _softmax_derivative(z):
     return np.array([np.diag(p) - np.outer(p, p) for p in z])
     
 _derivatives = {'identity': _identity_derivative,
-               'tanh': _tanh_derivative,
-               'logistic': _logistic_derivative,
-               'relu': _relu_derivative,
-               'softmax': _softmax_derivative}
+                'tanh': _tanh_derivative,
+                'logistic': _logistic_derivative,
+                'relu': _relu_derivative,
+                'softmax': _softmax_derivative}
         
