@@ -15,10 +15,20 @@ def get(name):
     return _functions[name], _derivatives[name]
     
 def _cross_entropy_loss(output, target):
-    return -np.dot(target.T, np.log(output))
+    output = np.maximum(1e-17, output)
+    return -np.sum(target * np.log(output), axis=-1).mean()
 
-def _cross_entropy_derivative(output, target):
-    return -target / output
+def _cross_entropy_derivative(output, target):    
+    output = np.maximum(1e-17, output)
+    return -(target / output) / (output.shape[0] if output.ndim > 1 else 1.0)
     
-_functions = {'cross_entropy': _cross_entropy_loss}
-_derivatives = {'cross_entropy': _cross_entropy_derivative}
+def _mean_square_loss(output, target):
+    return ((output - target) ** 2).mean() / 2.0
+    
+def _mean_square_derivative(output, target):
+    return (output - target) / output.size
+    
+_functions = {'cross_entropy': _cross_entropy_loss,
+              'mean_square': _mean_square_loss}
+_derivatives = {'cross_entropy': _cross_entropy_derivative,
+                'mean_square': _mean_square_derivative}

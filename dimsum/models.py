@@ -1,9 +1,10 @@
 import sys
-import itertools as it
 
 import numpy as np
 
-from .import objectives
+from . import objectives
+from . import optimizers
+from . import utils
 from .utils import ArrayPool
 from .layers import Layer
 
@@ -12,14 +13,16 @@ class NeuralNetwork(object):
     """
     
     
-    def __init__(self, objective='cross_entropy', derivative=None):
+    def __init__(self, optimizer='sgd', 
+                 objective='cross_entropy', derivative=None):
         """Initialize a new instance of NeuralNetwork.
         """
         
         self.params = None
         self.grads = None
         
-        self.layers = []
+        self.layers = []        
+        self._optimizer = optimizers.get(optimizer)
         
         if callable(objective):
             if not callable(derivative):
@@ -27,7 +30,7 @@ class NeuralNetwork(object):
             self._objective, self._derivative = objective, derivative
         else:
             self._objective, self._derivative = objectives.get(objective)
-    
+            
     def build(self):
         """Deploy the neural network and allocate memory to layers.
         """
@@ -56,10 +59,33 @@ class NeuralNetwork(object):
         else:
             raise ValueError('A Layer instance should be passed in.')
 
-    def fit(self, x, y, optimizer):
-        pass
+    def fit(self, training_set, callbacks=[], optimizer_args={}):
+        """Train this model using x and y.
+        """
+            
+        if isinstance(training_set, tuple):
+            sample_iter = utils.random_iter(*training_set)
+        else:
+            sample_iter = training_set
+            
+        optimizer = self._optimizer(**optimizer_args)
+        for x, y in sample_iter:
+            self.grads.reset()
+            self._acc_gradients(x, y)
+            optimizer.update(self.params[:], self.grads[:])
+            
+            # call callbacks
+            for callback, period in callbacks:
+                if optimizer.n_iters % period == 0:
+                    callback(self, optimizer)    
+        
+    def compute_loss(self, x, y_true):
+        """Compute loss for a batch of samples.
+        """
+        y_pred = self._forward_propagate(x)
+        return self._objective(y_pred, y_true)
     
-    def grad_check(self, x, y, eps=1e-4, tol=1e-8,
+    def grad_check(self, x, y, eps=1e-4, tol=1e-6,
            outfd=sys.stderr, skiplist=[]):
         """Check gradients on (x, y) using current params.
         """
@@ -78,18 +104,19 @@ class NeuralNetwork(object):
             for idx, v in np.ndenumerate(theta):
                 t = theta[idx]
                 theta[idx] = t + eps
-                Jplus  = self._compute_loss(x, y)
+                Jplus  = self.compute_loss(x, y)
                 theta[idx] = t - eps
-                Jminus = self._compute_loss(x, y)
+                Jminus = self.compute_loss(x, y)
                 theta[idx] = t
                 grad_approx[idx] = (Jplus - Jminus) / (2 * eps)
                 
             grad_delta = np.linalg.norm(grad_approx - grad_computed)
             print >> outfd, "error norm = %.04g" % grad_delta,
             print >> outfd, ("[ok]" if grad_delta < tol else "[ERROR]")
+            
             success &= (grad_delta < tol)
-                
-        self.grads.reset()
+        self.grads.reset()        
+        print >> outfd, "Result:", ("[Success]" if success else "[Failure]")
         return success
         
     def _forward_propagate(self, message):
@@ -103,12 +130,8 @@ class NeuralNetwork(object):
         for layer in self.layers[::-1]:
             msg = layer.back_propagate(msg)
         return msg
-        
-    def _compute_loss(self, message, targets):
-        outputs = self._forward_propagate(message)
-        return sum(self._objective(o, t) for o, t in it.izip(outputs, targets))
     
-    def _acc_gradients(self, samples, targets):
-        outputs = self._forward_propagate(samples)
-        errors = self._derivative(outputs, targets)
+    def _acc_gradients(self, x, y):
+        y_pred = self._forward_propagate(x)
+        errors = self._derivative(y_pred, y)
         self._back_propagate(errors)

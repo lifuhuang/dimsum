@@ -26,10 +26,38 @@ def make_onehot(i, n):
     """Make an array with its ith element being one, others zero.
     """
     
-    y = np.zeros(n)
-    y[i] = 1
+    y = np.zeros(n) 
+    y[i] = 1.0
+    return y
+    
+def make_onehots(indices, size):
+    """Make a 2-d array with only one element being one for each row.
+    """
+    
+    y = np.zeros(size) 
+    y[np.arange(size[0]), indices] = 1.0
     return y
 
+def random_iter(x, y, batch_size=20, n_epochs=5):
+    """Iterate over a set of samples randomly.
+    """
+    
+    assert x.shape[0] == y.shape[0]
+    epoch_size = x.shape[0]
+    for i in xrange(0, n_epochs * epoch_size, batch_size):
+        indices = np.random.randint(0, epoch_size, batch_size)
+        yield (x[indices], y[indices])
+
+def sequential_iter(x, y, batch_size=20, n_epochs=5):
+    """Iterate over a set of samples sequentially.
+    """
+    
+    assert x.shape[0] == y.shape[0]
+    epoch_size = x.shape[0]
+    for i in xrange(0, n_epochs * epoch_size, batch_size):
+        indices = np.arange(i % epoch_size, (i + batch_size) % epoch_size)
+        yield (x[indices], y[indices])
+    
 class ArrayPool(object):
     """Utility for storing and managing ndarrays in a centralized manner.
     
