@@ -19,7 +19,7 @@ class NeuralNetwork(object):
         self.params = None
         self.grads = None
         
-        self._layers = []
+        self.layers = []
         
         if callable(objective):
             if not callable(derivative):
@@ -33,12 +33,12 @@ class NeuralNetwork(object):
         """
         
         shapes = {}
-        for l in self._layers:        
+        for l in self.layers:        
             shapes.update(l.param_shapes)
             
         self.params = ArrayPool(shapes)
         self.grads = ArrayPool(shapes)
-        for layer in self._layers:
+        for layer in self.layers:
             layer.build()
 
     def predict(self, samples):
@@ -52,10 +52,12 @@ class NeuralNetwork(object):
         """
         
         if isinstance(layer, Layer):
-            self._layers.append(layer)
-            layer.attached_to = self
+            layer.attach_to(self)
         else:
             raise ValueError('A Layer instance should be passed in.')
+
+    def fit(self, x, y, optimizer):
+        pass
     
     def grad_check(self, x, y, eps=1e-4, tol=1e-8,
            outfd=sys.stderr, skiplist=[]):
@@ -70,8 +72,8 @@ class NeuralNetwork(object):
             if name in skiplist: 
                 continue
             print >> outfd, "Cheking dJ/d(%s)" % name,
-            theta = self.params[name]
-            grad_computed = self.grads[name]
+            theta = self.params.get(name)
+            grad_computed = self.grads.get(name)
             grad_approx = np.zeros(theta.shape)
             for idx, v in np.ndenumerate(theta):
                 t = theta[idx]
@@ -92,19 +94,19 @@ class NeuralNetwork(object):
         
     def _forward_propagate(self, message):
         msg = message
-        for layer in self._layers:
+        for layer in self.layers:
             msg = layer.forward_propagate(msg)
         return msg
     
+    def _back_propagate(self, message):
+        msg = message
+        for layer in self.layers[::-1]:
+            msg = layer.back_propagate(msg)
+        return msg
+        
     def _compute_loss(self, message, targets):
         outputs = self._forward_propagate(message)
         return sum(self._objective(o, t) for o, t in it.izip(outputs, targets))
-    
-    def _back_propagate(self, message):
-        msg = message
-        for layer in self._layers[::-1]:
-            msg = layer.back_propagate(msg)
-        return msg
     
     def _acc_gradients(self, samples, targets):
         outputs = self._forward_propagate(samples)

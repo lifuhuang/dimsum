@@ -32,11 +32,17 @@ def make_onehot(i, n):
 
 class ArrayPool(object):
     """Utility for storing and managing ndarrays in a centralized manner.
+    
+    ArrayPool provides a centralized interface for managing a set of arrays, 
+    and supports all ndarray operations by redirecting them to the underlying
+    big ndarray.
     """
+    
     
     def __init__(self, array_shapes):
         """Initialize a new instance of ArrayPool.
         """
+        
         self._names = array_shapes.keys()
         self._indices = {name: i for i, name in enumerate(self._names)}
         self._n_params = len(array_shapes)
@@ -48,17 +54,43 @@ class ArrayPool(object):
         for i, name in enumerate(self._names):
             segment = self._vec[self._ends[i]:self._ends[i+1]]
             self._views.append(segment.reshape(self._shapes[i]))
+            
             # support attribute-style access
             if not hasattr(self, name):
                 setattr(self, name, self._views[i])
             else:
-                raise ValueError('Parameter name %s has been reserved' % name)
+                raise ValueError('Parameter name %s has been reserved' % name)     
                 
-    def flatten(self):
-        """Return the flattened view of all parameters.
+    def __getattr__(self, key):
+        """Redirect attribute access to underlying ndarray.
         """
-        return self._vec
         
+        return getattr(self._vec, key)
+        
+    def __getitem__(self, key):
+        """Redirect indexing to underlying ndarray.
+        """
+        
+        return self._vec.__getitem__(key)
+    
+    def __setitem__(self, key, value):
+        """Redirect indexing to underlying ndarray.
+        """
+        
+        return self._vec.__setitem__(key, value)
+    
+    def __len__(self):
+        """Redirect len operation to underlying ndarray.
+        """
+        
+        return len(self._vec)        
+    
+    def __iter__(self):
+        """Redirect len operation to underlying ndarray.
+        """
+        
+        return iter(self._vec)
+    
     def reset(self):
         """Reset all elements to zero.
         """
@@ -69,11 +101,10 @@ class ArrayPool(object):
         """
         return self._indices.keys()
         
-    def __getitem__(self, key):
-        idx = self._indices[key]
+    def get(self, name):
+        """Return view of array with given name.
+        """
+        
+        idx = self._indices[name]
         return self._views[idx]
-
-    def __setitem__(self, key, value):
-        idx = self._indices[key]
-        self._views[idx][:] = value
        

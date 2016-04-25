@@ -17,7 +17,7 @@ class Layer(object):
     """
     
     
-    def __init__(self, name=None):
+    def __init__(self, size, name=None):
         """Initialize a new instance of Layer.
         
         Since Layer is a abstract class, this method should only be called by
@@ -25,27 +25,22 @@ class Layer(object):
         """
         
         self.param_shapes = {}
+        self.size = size
         self.attached_to = None
         self.name = id(self) if name is None else name
-    
-    def forward_propagate(self, msg):
-        """Calculates activation of this layer given msg.
+        
+    def attach_to(self, model):
+        """Attach this layer to a neural network model.
+        
+        This method can be overridden to specify operations to do when a layer
+        is added to a neural network model, such as setting param_shapes. Sub-
+        classes are supposed to call this in base class before doing their own
+        tasks.
         """
-        
-        raise NotImplementedError
-        
-    def back_propagate(self, msg, update=True):
-        """Updates delta, gradients, and error message to lower layers.
-        """
-        
-        raise NotImplementedError
-        
-    def builds(self):
-        """Deploy this Layer and obtain actual memory.
-        """
-    
-        raise NotImplementedError
-        
+
+        self.attached_to = model
+        model.layers.append(self)
+            
     def get_config(self):
         """Return a dict containing information of this Layer.
         
@@ -55,34 +50,69 @@ class Layer(object):
         """
         
         return {'params_shapes': self.param_shapes,
+                'size': self.size,
                 'attached_to': self.attached_to,
                 'name': self.name}
+                
+    def forward_propagate(self, msg):
+        """Calculates activation of this layer given msg.
+        """
+        
+        raise NotImplementedError
+        
+    def back_propagate(self, msg):
+        """Updates delta, gradients, and error message to lower layers.
+        """
+        
+        raise NotImplementedError
+        
+    def build(self):
+        """Deploy this Layer and obtain actual memory.
+        """
+    
+        raise NotImplementedError
+
+class InputLayer(Layer):
+    """Dumb layer with no parameters.
+        """
+    
+    def forward_propagate(self, msg):
+        """Calculates activation of this layer given msg.
+        """
+        
+        return msg
+        
+    def back_propagate(self, msg):
+        """Updates delta, gradients, and error message to lower layers.
+        """
+        
+        return msg
+        
+    def build(self):
+        """Deploy this Layer and obtain actual memory.
+        """
+    
+        pass
 
 class DenseLayer(Layer):
     """A simple full-connected feedforward layer.
     """
     
     
-    def __init__(self, fan_in, fan_out, 
+    def __init__(self, size, name=None,
                  weight_filler='xavier', bias_filler='constant', 
-                 activation='logistic', derivative=None, **kwargs):
+                 activation='logistic', derivative=None):
         """Initialize a new instance of DenseLayer.
         """
         
         # initialize base class
-        super(type(self), self).__init__(**kwargs)
-        
-        # set size info
-        self.fan_in = fan_in
-        self.fan_out = fan_out
+        super(type(self), self).__init__(size, name)
         
         # parameters
         self.W = None
         self.b = None  
         self.dW = None
         self.db = None
-        self.param_shapes['%s_W' % self.name] = (fan_in, fan_out)
-        self.param_shapes['%s_b' % self.name] = (fan_out,)
         
         # weight filler
         if callable(weight_filler):
@@ -104,10 +134,24 @@ class DenseLayer(Layer):
         else:
             self._activation, self._derivative = activations.get(activation)
         
-        # cache of input/output
+        # cache for input/output
         self._input = None
         self._output = None    
-
+    
+    def attach_to(self, model):
+        """Attach this layer to a neural network model.
+        """
+        
+        if not model.layers:
+            raise ValueError('Input layer is needed before adding new layers.')
+           
+        prev_layer = model.layers[-1]
+        
+        super(type(self), self).attach_to(model)
+        
+        self.param_shapes['%s_W' % self.name] = (prev_layer.size, self.size)
+        self.param_shapes['%s_b' % self.name] = (self.size,)
+        
     def get_config(self):
         """Return a dict containing information of this Layer.
         """
@@ -142,10 +186,10 @@ class DenseLayer(Layer):
         """Deploy this Layer and obtain actual memory.
         """
         
-        self.W = self.attached_to.params['%s_W' % self.name]
+        self.W = self.attached_to.params.get('%s_W' % self.name)
         self._weight_filler(self.W)
-        self.dW = self.attached_to.grads['%s_W' % self.name]
+        self.dW = self.attached_to.grads.get('%s_W' % self.name)
         
-        self.b = self.attached_to.params['%s_b' % self.name]
+        self.b = self.attached_to.params.get('%s_b' % self.name)
         self._bias_filler(self.b)
-        self.db = self.attached_to.grads['%s_b' % self.name]
+        self.db = self.attached_to.grads.get('%s_b' % self.name)
