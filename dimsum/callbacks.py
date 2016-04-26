@@ -4,6 +4,7 @@ Created on Mon Apr 25 20:09:14 2016
 
 @author: lifu
 """
+
 import sys
 
 def print_loss(model, optimizer, x, y, fmt=None, outfd=sys.stderr):
