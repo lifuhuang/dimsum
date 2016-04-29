@@ -37,14 +37,16 @@ class Layer(object):
         classes are supposed to call this in base class before doing their own
         tasks.
         """
-
+        
+        if self not in model.layers:
+            raise ValueError('Layer is not in model %s\'s layer list.' % model)
         self.attached_to = model
-        model.layers.append(self)
             
     def get_config(self):
         """Return a dict containing information of this Layer.
         
-        This is used for serialization, thus derived classes should override 
+        This is used for serialization,
+        thus derived classes should override 
         this by returning a dict containing their own information as well as 
         that of base class obtained by calling this method.
         """
@@ -142,13 +144,12 @@ class DenseLayer(Layer):
         """Attach this layer to a neural network model.
         """
         
-        if not model.layers:
-            raise ValueError('Input layer is needed before adding new layers.')
-           
-        prev_layer = model.layers[-1]
         
-        super(type(self), self).attach_to(model)
-        
+        super(type(self), self).attach_to(model)            
+        index = model.layers.index(self)
+        if index == 0:
+            raise ValueError('Input layer is needed before DenseLayer.')
+        prev_layer = model.layers[index - 1]
         self.param_shapes['%s_W' % self.name] = (prev_layer.size, self.size)
         self.param_shapes['%s_b' % self.name] = (self.size,)
         

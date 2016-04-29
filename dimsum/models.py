@@ -13,8 +13,7 @@ class NeuralNetwork(object):
     """
     
     
-    def __init__(self, optimizer='sgd', 
-                 objective='cross_entropy', derivative=None):
+    def __init__(self, objective, optimizer='sgd', derivative=None):
         """Initialize a new instance of NeuralNetwork.
         """
         
@@ -55,6 +54,7 @@ class NeuralNetwork(object):
         """
         
         if isinstance(layer, Layer):
+            self.layers.append(layer)
             layer.attach_to(self)
         else:
             raise ValueError('A Layer instance should be passed in.')
