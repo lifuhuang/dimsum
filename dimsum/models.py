@@ -85,6 +85,24 @@ class NeuralNetwork(object):
         y_pred = self._forward_propagate(x)
         return self._objective(y_pred, y_true)
     
+    def save(self, path):
+        """Save model to file.
+        """
+        
+        import cPickle as pickle
+        with open(path, 'w') as fp:
+            pickle.dump(self, fp)
+    
+    @staticmethod
+    def load(self, path):
+        """Load saved model from file.
+        """
+        
+        import cPickle as pickle
+        with open(path, 'r') as fp:
+            model = pickle.dump(fp)
+        return model
+        
     def grad_check(self, x, y, eps=1e-4, tol=1e-6,
            outfd=sys.stderr, skiplist=[]):
         """Check gradients on (x, y) using current params.
