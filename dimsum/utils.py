@@ -38,7 +38,7 @@ def make_onehots(indices, size):
     y[np.arange(size[0]), indices] = 1.0
     return y
 
-def random_iter(x, y, batch_size=20, n_epochs=5):
+def random_iter(x, y, batch_size=32, n_epochs=5):
     """Iterate over a set of samples randomly.
     """
     

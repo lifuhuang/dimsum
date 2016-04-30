@@ -5,8 +5,6 @@ Created on Mon Apr 25 12:17:32 2016
 @author: lifu
 """
 
-import numpy as np
-
 class Optimizer(object):
     """Abstract base class for all Optimizers.
     
@@ -66,8 +64,3 @@ class SgdOptimizer(Optimizer):
         
         super(type(self), self).update(params, grads)
         params -= self.learning_rate * grads
-
-optimizers = {'sgd': SgdOptimizer}
-
-def get(name):
-    return optimizers[name]

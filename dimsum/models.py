@@ -2,9 +2,6 @@ import sys
 
 import numpy as np
 
-from . import objectives
-from . import optimizers
-from . import utils
 from .utils import ArrayPool
 from .layers import Layer
 
@@ -13,7 +10,7 @@ class NeuralNetwork(object):
     """
     
     
-    def __init__(self, objective, optimizer='sgd', derivative=None):
+    def __init__(self, objective):
         """Initialize a new instance of NeuralNetwork.
         """
         
@@ -21,14 +18,8 @@ class NeuralNetwork(object):
         self.grads = None
         
         self.layers = []        
-        self._optimizer = optimizers.get(optimizer)
         
-        if callable(objective):
-            if not callable(derivative):
-                raise ValueError('No valid derivative is provided.')
-            self._objective, self._derivative = objective, derivative
-        else:
-            self._objective, self._derivative = objectives.get(objective)
+        self._objective = objective
             
     def build(self):
         """Deploy the neural network and allocate memory to layers.
@@ -59,19 +50,23 @@ class NeuralNetwork(object):
         else:
             raise ValueError('A Layer instance should be passed in.')
 
-    def fit(self, training_set, callbacks=[], optimizer_args={}):
+    def fit(self, x, y, optimizer, n_epochs=5, batch_size=32,
+            randomized=True, callbacks=[]):
         """Train this model using x and y.
         """
-            
-        if isinstance(training_set, tuple):
-            sample_iter = utils.random_iter(*training_set)
-        else:
-            sample_iter = training_set
-            
-        optimizer = self._optimizer(**optimizer_args)
-        for x, y in sample_iter:
+        assert x.shape[0] == y.shape[0]
+        
+        epoch_size = x.shape[0]
+        
+        for i in xrange(0, n_epochs * epoch_size, batch_size):
+            if randomized:
+                indices = np.random.randint(0, epoch_size, batch_size)
+            else:
+                st = i % epoch_size
+                indices = np.arange(st, st + batch_size)
+                
             self.grads.reset()
-            self._acc_gradients(x, y)
+            self._acc_gradients(x[indices], y[indices])
             optimizer.update(self.params[:], self.grads[:])
             
             # call callbacks
@@ -82,8 +77,12 @@ class NeuralNetwork(object):
     def compute_loss(self, x, y_true):
         """Compute loss for a batch of samples.
         """
-        y_pred = self._forward_propagate(x)
-        return self._objective(y_pred, y_true)
+        reg_loss = 0.0
+        msg = x
+        for layer in self.layers:
+            msg = layer.forward_propagate(msg)
+            reg_loss += layer.compute_reg_loss()
+        return reg_loss + self._objective.function(msg, y_true)
     
     def save(self, path):
         """Save model to file.
@@ -151,5 +150,5 @@ class NeuralNetwork(object):
     
     def _acc_gradients(self, x, y):
         y_pred = self._forward_propagate(x)
-        errors = self._derivative(y_pred, y)
+        errors = self._objective.derivative(y_pred, y)
         self._back_propagate(errors)

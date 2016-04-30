@@ -9,82 +9,109 @@ import numpy as np
 
 from . import utils
 
-def get(name):
-    """Return an activation function and its derivative according to name.
+class Activation(object):
+    """Base class for all activation functions and their gradients.
     """
-    
-    if name not in _functions:
-        raise ValueError('%s is not a valid activation function' % name)    
-    return _functions[name], _derivatives[name]
 
-def _identity(x):
-    """Return the value unchanged."""
-    
-    return x
-
-def _tanh(x):
-    """Return the tanh value of the array-like input. 
-    """
-    
-    return np.tanh(x)
-
-def _logistic(x):
-    """Return the sigmoid value of the array-like input. 
-    """
-    
-    return 1.0 / (1.0 + np.exp(-x))
-
-def _relu(x):
-    """Return the relu value of the array-like input.
-    """
-    
-    return np.maximum(0, x)
-    
-def _softmax(x):
-    """Return the Softmax value of the array-like input.
-    """
-    
-    return utils.softmax(x)
-
-_functions = {'identity': _identity, 
-              'tanh': _tanh, 
-              'logistic': _logistic,
-              'relu': _relu,
-              'softmax': _softmax}
-
-def _logistic_derivative(z):
-    """Return the derivative of logistic function given its function output.
-    """
-    
-    return z * (1.0 - z)
-
-def _tanh_derivative(z):
-    """Return the derivative of tanh function given its function output.
-    """
-    
-    return 1.0 - (z ** 2.0)
-
-def _relu_derivative(z):
-    """Return the derivative of ReLu function given its function output.
-    """
-    
-    return (z > 0).astype(z.dtype)
-
-def _identity_derivative(z):
-    """Return the derivative of identity function given its function output.
-    """
-    
-    return np.ones(z.shape)
-
-def _softmax_derivative(z):
-    """Return the derivative of softmax function given its function output.
-    """
-    
-    return np.array([np.diag(p) - np.outer(p, p) for p in z])
-    
-_derivatives = {'identity': _identity_derivative,
-                'tanh': _tanh_derivative,
-                'logistic': _logistic_derivative,
-                'relu': _relu_derivative,
-                'softmax': _softmax_derivative}
         
+    def function(self, x):
+        """Call activation function given input x.
+        """
+        
+        raise NotImplementedError
+        
+    def derivative(self, y):
+        """Call the derivative of activation function given function output y.
+        """
+        
+        raise NotImplementedError
+
+class ReLu(Activation):
+    """Rectified Linear Unit.
+    """
+    
+    @staticmethod
+    def function(x):
+        """Return the relu value of the array-like input.
+        """
+        
+        return np.maximum(0, x)
+    
+    @staticmethod
+    def derivative(y):
+        """Return the derivative of ReLu function given its function output.
+        """
+    
+        return (y > 0).astype(y.dtype)
+
+class Tanh(Activation):
+    """Hyperbolic function.
+    """
+    
+    @staticmethod
+    def function(x):
+        """Return the tanh value of the array-like input. 
+        """
+    
+        return np.tanh(x)
+        
+    @staticmethod
+    def derivative(y):
+        """Return the derivative of tanh function given its function output.
+        """
+    
+        return 1.0 - (y ** 2.0)    
+        
+class Softmax(Activation):
+    """Softmax function.
+    """
+
+    @staticmethod
+    def function(x):
+        """Return the Softmax value of the array-like input.
+        """
+    
+        return utils.softmax(x)   
+        
+    @staticmethod
+    def derivative(y):
+        """Return the derivative of softmax function given its function output.
+        """
+        
+        return np.array([np.diag(p) - np.outer(p, p) for p in y])
+
+class Sigmoid(Activation):
+    """Logistic function.
+    """
+    
+    @staticmethod
+    def function(x):
+        """Return the derivative of logistic function given its function output.
+        """
+    
+        return 1.0 / (1.0 + np.exp(-x))
+    
+    @staticmethod
+    def derivative(y):
+        """Return the derivative of logistic function given its function output.
+        """
+        
+        return y * (1.0 - y)
+
+class Identity(Activation):
+    """Dummy activation function.
+    """
+    
+    @staticmethod
+    def function(x):
+        """Return the input unchanged
+        """
+    
+        return x
+    
+    @staticmethod
+    def derivative(y):
+        """Return the derivative of identity function.
+        """
+        
+        return np.ones(y.shape)
