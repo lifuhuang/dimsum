@@ -17,10 +17,10 @@ class NeuralNetwork(object):
         self.params = None
         self.grads = None
         
-        self.layers = []        
+        self.layers = []      
         
         self._objective = objective
-            
+        
     def build(self):
         """Deploy the neural network and allocate memory to layers.
         """
@@ -54,29 +54,35 @@ class NeuralNetwork(object):
             randomized=True, callbacks=[]):
         """Train this model using x and y.
         """
+        
         assert x.shape[0] == y.shape[0]
         
+        # wrap current model into args passed to callbacks
+        model = self
         epoch_size = x.shape[0]
         
         for i in xrange(0, n_epochs * epoch_size, batch_size):
             if randomized:
-                indices = np.random.randint(0, epoch_size, batch_size)
+                batch_indices = np.random.randint(0, epoch_size, batch_size)
             else:
                 st = i % epoch_size
-                indices = np.arange(st, st + batch_size)
+                batch_indices = np.arange(st, st + batch_size)
                 
             self.grads.reset()
-            self._acc_gradients(x[indices], y[indices])
+            x_batch = x[batch_indices]
+            y_batch = y[batch_indices]
+            self._acc_gradients(x_batch, y_batch)
             optimizer.update(self.params[:], self.grads[:])
             
             # call callbacks
             for callback, period in callbacks:
                 if optimizer.n_iters % period == 0:
-                    callback(self, optimizer)    
+                    callback(locals())    
         
     def compute_loss(self, x, y_true):
         """Compute loss for a batch of samples.
         """
+        
         reg_loss = 0.0
         msg = x
         for layer in self.layers:
@@ -84,23 +90,17 @@ class NeuralNetwork(object):
             reg_loss += layer.compute_reg_loss()
         return reg_loss + self._objective.function(msg, y_true)
     
-    def save(self, path):
-        """Save model to file.
+    def save_params(self, path):
+        """Save params to file.
         """
         
-        import cPickle as pickle
-        with open(path, 'w') as fp:
-            pickle.dump(self, fp)
+        np.save(path, self.params)
     
-    @staticmethod
-    def load(self, path):
-        """Load saved model from file.
+    def load_params(self, path):
+        """Load saved params from file.
         """
         
-        import cPickle as pickle
-        with open(path, 'r') as fp:
-            model = pickle.dump(fp)
-        return model
+        self.params[:] = np.load(path)
         
     def grad_check(self, x, y, eps=1e-4, tol=1e-6,
            outfd=sys.stderr, skiplist=[]):

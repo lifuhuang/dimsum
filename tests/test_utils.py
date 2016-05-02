@@ -43,9 +43,6 @@ class TestArrayPool:
         ap = ArrayPool({'a': (100, 200), 'b': (10, 10, 10, 10), 'c': (10,)})
         ap._vec[:] = np.random.randn(*ap._vec.shape)
         
-        assert np.linalg.norm(ap.flatten() - ap._vec) < eps
-        assert len(ap) == len(ap._vec)
-        
         # test __len__
         assert len(ap) == len(ap._vec)
         

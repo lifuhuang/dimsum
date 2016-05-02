@@ -108,8 +108,7 @@ class TestNeuralNetwork:
         
         x = np.random.randn(50, 30)
         y = utils.make_onehots(np.random.randint(0, 2, 50), (50, 2))
-        cb = [(callbacks.print_iteration_info, 100),
-              (lambda m, r: callbacks.print_loss(m, r, x, y), 100)]
+        cb = [(callbacks.IterationPrinter, 100),]
               
         model.fit(x, y, 
                   n_epochs=2000,

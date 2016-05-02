@@ -88,12 +88,6 @@ class ArrayPool(object):
                 setattr(self, name, self._views[i])
             else:
                 raise ValueError('Parameter name %s has been reserved' % name)     
-                
-    def __getattr__(self, key):
-        """Redirect attribute access to underlying ndarray.
-        """
-        
-        return getattr(self._vec, key)
         
     def __getitem__(self, key):
         """Redirect indexing to underlying ndarray.
