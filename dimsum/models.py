@@ -73,7 +73,6 @@ class NeuralNetwork(object):
             y_batch = y[batch_indices]
             self._acc_gradients(x_batch, y_batch)
             optimizer.update(self.params[:], self.grads[:])
-            
             # call callbacks
             for callback, period in callbacks:
                 if optimizer.n_iters % period == 0:

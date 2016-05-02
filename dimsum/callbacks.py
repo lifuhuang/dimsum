@@ -14,11 +14,13 @@ class LossPrinter(object):
     """
     
     
-    def __init__(self, x=None, y=None, outfd=sys.stderr):
+    def __init__(self, x=None, y=None, outfd=sys.stderr, update_rate=1.0):
         self._x = x
         self._y = y
         self._outfd = outfd
-    
+        self._update_rate = update_rate
+        self._loss = None
+        
     def __call__(self, msg):
         model = msg['model']
         if self._x is None and self._y is None:
@@ -26,8 +28,13 @@ class LossPrinter(object):
         else:
             x, y = self._x, self._y
             
-        loss = model.compute_loss(x, y)
-        print >> self._outfd, 'Loss on dataset: %.08f' % loss
+        if self._loss is None:
+            self._loss = model.compute_loss(x, y)
+        else:
+            self._loss = (model.compute_loss(x, y) * self._update_rate + 
+                        self._loss * (1.0 - self._update_rate))
+                        
+        print >> self._outfd, 'Loss on dataset: %.08f' % self._loss
     
 class LossPlotter(object):
     """Plot loss curves.

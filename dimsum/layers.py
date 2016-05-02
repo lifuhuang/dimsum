@@ -10,6 +10,7 @@ import itertools as it
 import numpy as np
 
 from . import initializations
+from . import activations
 
 class Layer(object):
     """Base class for all kinds of layers.
@@ -65,7 +66,35 @@ class Layer(object):
     
         raise NotImplementedError
 
-class InputLayer(Layer):
+class Input(Layer):
+    """Dumb layer with no parameters.
+        """
+    
+    def forward_propagate(self, msg):
+        """Calculates activation of this layer given msg.
+        """
+        
+        return msg
+        
+    def back_propagate(self, msg):
+        """Updates delta, gradients, and error message to lower layers.
+        """
+        
+        return msg
+
+    def compute_reg_loss(self):
+        """Return penalty from regularization.
+        """
+        
+        return 0.0
+        
+    def build(self):
+        """Deploy this Layer and obtain actual memory.
+        """
+    
+        pass
+    
+class Embedding(Layer):
     """Dumb layer with no parameters.
         """
     
@@ -93,7 +122,7 @@ class InputLayer(Layer):
     
         pass
 
-class DenseLayer(Layer):
+class Affine(Layer):
     """A simple full-connected feedforward layer.
     """
     
@@ -101,7 +130,7 @@ class DenseLayer(Layer):
     def __init__(self, size, name=None,
                  W_init='xavier', b_init='constant', 
                  W_regularizer=None, b_regularizer=None,
-                 activation='logistic', bias=True):
+                 activation=activations.Identity, bias=True):
         """Initialize a new instance of DenseLayer.
         """
         
@@ -208,7 +237,7 @@ class DenseLayer(Layer):
             self._b_init(self.b)
             self.db = self.attached_to.grads.get('%s_b' % self.name)
 
-class ConvLayer1D(object):
+class Convolution1D(object):
     """Base class for all kinds of layers.
     """
     

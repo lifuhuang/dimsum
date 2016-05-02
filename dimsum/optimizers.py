@@ -5,6 +5,9 @@ Created on Mon Apr 25 12:17:32 2016
 @author: lifu
 """
 
+
+import numpy as np
+
 class Optimizer(object):
     """Abstract base class for all Optimizers.
     
@@ -33,7 +36,7 @@ class Optimizer(object):
         
         self.n_iters += 1
 
-class SgdOptimizer(Optimizer):    
+class SGD(Optimizer):    
     """Stochastic Gradient Descent optimizer.
     """
 
@@ -56,7 +59,7 @@ class SgdOptimizer(Optimizer):
             return self.init_lr
         else:
             return self.init_lr * (self.decay_rate ** 
-                                    (self.n_iter // self.decay_period))
+                                    (self.n_iters // self.decay_period))
         
     def update(self, params, grads):
         """Update parameters given their gradients.
@@ -64,3 +67,29 @@ class SgdOptimizer(Optimizer):
         
         super(type(self), self).update(params, grads)
         params -= self.learning_rate * grads
+        
+
+class Adagrad(Optimizer):    
+    """Stochastic Gradient Descent optimizer.
+    """
+
+    
+    def __init__(self, learning_rate):
+        """Initialize a new SgdOptimizer instance.
+        """
+        
+        super(type(self), self).__init__()
+        self.learning_rate = learning_rate
+        self._cache = None
+        
+    def update(self, params, grads):
+        """Update parameters given their gradients.
+        """
+        
+        super(type(self), self).update(params, grads)
+        if self._cache is None:
+            self._cache = np.zeros(params.shape)
+            
+        self._cache += grads ** 2
+        params -= self.learning_rate * grads / np.sqrt(self._cache + 1e-8)
+

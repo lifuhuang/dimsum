@@ -28,21 +28,21 @@ class TestNeuralNetwork:
         
         # tanh multi-label classifier
         model = NeuralNetwork(objective=BinaryCrossEntropy)
-        model.add(InputLayer(20, name='layer0'))
-        model.add(DenseLayer(30, name='layer1', activation=Tanh))
-        model.add(DenseLayer(20, name='layer2', activation=Sigmoid))
+        model.add(Input(20, name='layer0'))
+        model.add(Affine(30, name='layer1', activation=Tanh))
+        model.add(Affine(20, name='layer2', activation=Sigmoid))
         model.build()
         assert model.grad_check(np.random.randn(10, 20), 
                                 np.random.rand(10, 20))
                                 
         # logistic multi-class classifier with regularization               
         model = NeuralNetwork(objective=CrossEntropy)
-        model.add(InputLayer(20, name='layer0'))
-        model.add(DenseLayer(30, name='layer1', 
+        model.add(Input(20, name='layer0'))
+        model.add(Affine(30, name='layer1', 
                              activation=Sigmoid, 
                              W_regularizer=L2(0.1), 
                              b_regularizer=L2(0.1)))
-        model.add(DenseLayer(20, name='layer2', 
+        model.add(Affine(20, name='layer2', 
                              activation=Softmax, 
                              W_regularizer=L2(0.01), 
                              b_regularizer=L2(0.01)))
@@ -52,17 +52,17 @@ class TestNeuralNetwork:
                                 
         # deep multi-class classifier
         model = NeuralNetwork(objective=CrossEntropy)
-        model.add(InputLayer(30, name='layer0'))
-        model.add(DenseLayer(51, name='layer1', activation=Sigmoid))
-        model.add(DenseLayer(50, name='layer2', 
+        model.add(Input(30, name='layer0'))
+        model.add(Affine(51, name='layer1', activation=Sigmoid))
+        model.add(Affine(50, name='layer2', 
                              activation=Tanh, 
                              W_regularizer=L2(0.1)))
-        model.add(DenseLayer(49, name='layer3', 
-                             activation=ReLu, 
+        model.add(Affine(49, name='layer3', 
+                             activation=ReLU, 
                              W_regularizer=L2(0.1)))
-        model.add(DenseLayer(52, name='layer4', 
+        model.add(Affine(52, name='layer4', 
                              activation=Identity))        
-        model.add(DenseLayer(30, name='layer5', 
+        model.add(Affine(30, name='layer5', 
                              activation=Softmax))
         model.build()
         assert model.grad_check(np.random.randn(10, 30), 
@@ -71,24 +71,24 @@ class TestNeuralNetwork:
         # Test regression network
         # single-output regression
         model = NeuralNetwork(objective=MeanSquareError)
-        model.add(InputLayer(20, name='layer0'))
-        model.add(DenseLayer(30, name='layer1', activation=ReLu))
-        model.add(DenseLayer(30, name='layer2', activation=ReLu))
-        model.add(DenseLayer(1, name='layer3', activation=ReLu))
+        model.add(Input(20, name='layer0'))
+        model.add(Affine(30, name='layer1', activation=ReLU))
+        model.add(Affine(30, name='layer2', activation=ReLU))
+        model.add(Affine(1, name='layer3', activation=ReLU))
         model.build()
         assert model.grad_check(np.random.randn(10, 20), 
                                 np.random.randn(10, 1))
         
         # multi-output regression                                
         model = NeuralNetwork(objective=MeanSquareError)
-        model.add(InputLayer(20, name='layer0'))
-        model.add(DenseLayer(30, name='layer1', 
+        model.add(Input(20, name='layer0'))
+        model.add(Affine(30, name='layer1', 
                              activation=Tanh, 
                              W_regularizer=L2(0.1)))        
-        model.add(DenseLayer(30, name='layer2', 
+        model.add(Affine(30, name='layer2', 
                              activation=Tanh, 
                              W_regularizer=L2(0.1)))
-        model.add(DenseLayer(10, name='layer3', 
+        model.add(Affine(10, name='layer3', 
                              activation=Identity, 
                              W_regularizer=L2(0.1)))
         model.build()
@@ -100,10 +100,10 @@ class TestNeuralNetwork:
         """
         
         model = NeuralNetwork(objective=CrossEntropy)
-        model.add(InputLayer(30, name='layer0'))
-        model.add(DenseLayer(100, name='layer1', activation=Tanh))
-        model.add(DenseLayer(100, name='layer2', activation=Tanh))
-        model.add(DenseLayer(2, name='layer4', activation=Softmax))
+        model.add(Input(30, name='layer0'))
+        model.add(Affine(100, name='layer1', activation=Tanh))
+        model.add(Affine(100, name='layer2', activation=Tanh))
+        model.add(Affine(2, name='layer4', activation=Softmax))
         model.build()
         
         x = np.random.randn(50, 30)
@@ -114,5 +114,5 @@ class TestNeuralNetwork:
                   n_epochs=2000,
                   batch_size=32,
                   callbacks=cb, 
-                  optimizer=SgdOptimizer(learning_rate=0.3))
+                  optimizer=SGD(learning_rate=0.3))
         assert model.compute_loss(x, y) < 1e-4

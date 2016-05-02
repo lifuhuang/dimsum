@@ -26,7 +26,7 @@ class Activation(object):
         
         raise NotImplementedError
 
-class ReLu(Activation):
+class ReLU(Activation):
     """Rectified Linear Unit.
     """
     
