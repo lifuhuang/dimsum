@@ -29,8 +29,8 @@ class TestNeuralNetwork:
         # tanh multi-label classifier
         model = NeuralNetwork(objective=BinaryCrossEntropy)
         model.add(Input(20, name='layer0'))
-        model.add(Affine(30, name='layer1', activation=Tanh))
-        model.add(Affine(20, name='layer2', activation=Sigmoid))
+        model.add(Dense(30, name='layer1', activation=Tanh))
+        model.add(Dense(20, name='layer2', activation=Sigmoid))
         model.build()
         assert model.grad_check(np.random.randn(10, 20), 
                                 np.random.rand(10, 20))
@@ -38,11 +38,11 @@ class TestNeuralNetwork:
         # logistic multi-class classifier with regularization               
         model = NeuralNetwork(objective=CrossEntropy)
         model.add(Input(20, name='layer0'))
-        model.add(Affine(30, name='layer1', 
+        model.add(Dense(30, name='layer1', 
                              activation=Sigmoid, 
                              W_regularizer=L2(0.1), 
                              b_regularizer=L2(0.1)))
-        model.add(Affine(20, name='layer2', 
+        model.add(Dense(20, name='layer2', 
                              activation=Softmax, 
                              W_regularizer=L2(0.01), 
                              b_regularizer=L2(0.01)))
@@ -53,16 +53,16 @@ class TestNeuralNetwork:
         # deep multi-class classifier
         model = NeuralNetwork(objective=CrossEntropy)
         model.add(Input(30, name='layer0'))
-        model.add(Affine(51, name='layer1', activation=Sigmoid))
-        model.add(Affine(50, name='layer2', 
+        model.add(Dense(51, name='layer1', activation=Sigmoid))
+        model.add(Dense(50, name='layer2', 
                              activation=Tanh, 
                              W_regularizer=L2(0.1)))
-        model.add(Affine(49, name='layer3', 
+        model.add(Dense(49, name='layer3', 
                              activation=ReLU, 
                              W_regularizer=L2(0.1)))
-        model.add(Affine(52, name='layer4', 
+        model.add(Dense(52, name='layer4', 
                              activation=Identity))        
-        model.add(Affine(30, name='layer5', 
+        model.add(Dense(30, name='layer5', 
                              activation=Softmax))
         model.build()
         assert model.grad_check(np.random.randn(10, 30), 
@@ -72,9 +72,9 @@ class TestNeuralNetwork:
         # single-output regression
         model = NeuralNetwork(objective=MeanSquareError)
         model.add(Input(20, name='layer0'))
-        model.add(Affine(30, name='layer1', activation=ReLU))
-        model.add(Affine(30, name='layer2', activation=ReLU))
-        model.add(Affine(1, name='layer3', activation=ReLU))
+        model.add(Dense(30, name='layer1', activation=ReLU))
+        model.add(Dense(30, name='layer2', activation=ReLU))
+        model.add(Dense(1, name='layer3', activation=ReLU))
         model.build()
         assert model.grad_check(np.random.randn(10, 20), 
                                 np.random.randn(10, 1))
@@ -82,13 +82,13 @@ class TestNeuralNetwork:
         # multi-output regression                                
         model = NeuralNetwork(objective=MeanSquareError)
         model.add(Input(20, name='layer0'))
-        model.add(Affine(30, name='layer1', 
+        model.add(Dense(30, name='layer1', 
                              activation=Tanh, 
                              W_regularizer=L2(0.1)))        
-        model.add(Affine(30, name='layer2', 
+        model.add(Dense(30, name='layer2', 
                              activation=Tanh, 
                              W_regularizer=L2(0.1)))
-        model.add(Affine(10, name='layer3', 
+        model.add(Dense(10, name='layer3', 
                              activation=Identity, 
                              W_regularizer=L2(0.1)))
         model.build()
@@ -101,9 +101,9 @@ class TestNeuralNetwork:
         
         model = NeuralNetwork(objective=CrossEntropy)
         model.add(Input(30, name='layer0'))
-        model.add(Affine(100, name='layer1', activation=Tanh))
-        model.add(Affine(100, name='layer2', activation=Tanh))
-        model.add(Affine(2, name='layer4', activation=Softmax))
+        model.add(Dense(100, name='layer1', activation=Tanh))
+        model.add(Dense(100, name='layer2', activation=Tanh))
+        model.add(Dense(2, name='layer4', activation=Softmax))
         model.build()
         
         x = np.random.randn(50, 30)

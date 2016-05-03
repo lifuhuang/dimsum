@@ -93,36 +93,8 @@ class Input(Layer):
         """
     
         pass
-    
-class Embedding(Layer):
-    """Dumb layer with no parameters.
-        """
-    
-    def forward_propagate(self, msg):
-        """Calculates activation of this layer given msg.
-        """
-        
-        return msg
-        
-    def back_propagate(self, msg):
-        """Updates delta, gradients, and error message to lower layers.
-        """
-        
-        return msg
 
-    def compute_reg_loss(self):
-        """Return penalty from regularization.
-        """
-        
-        return 0.0
-        
-    def build(self):
-        """Deploy this Layer and obtain actual memory.
-        """
-    
-        pass
-
-class Affine(Layer):
+class Dense(Layer):
     """A simple full-connected feedforward layer.
     """
     
@@ -236,57 +208,3 @@ class Affine(Layer):
             self.b = self.attached_to.params.get('%s_b' % self.name)
             self._b_init(self.b)
             self.db = self.attached_to.grads.get('%s_b' % self.name)
-
-class Convolution1D(object):
-    """Base class for all kinds of layers.
-    """
-    
-    
-    def __init__(self, size, name=None):
-        """Initialize a new instance of Layer.
-        
-        Since Layer is a abstract class, this method should only be called by
-        its derived classes.
-        """
-        
-        self.param_shapes = {}
-        self.size = size
-        self.attached_to = None
-        self.name = id(self) if name is None else name
-        
-    def attach_to(self, model):
-        """Attach this layer to a neural network model.
-        
-        This method can be overridden to specify operations to do when a layer
-        is added to a neural network model, such as setting param_shapes. Sub-
-        classes are supposed to call this in base class before doing their own
-        tasks.
-        """
-        
-        if self not in model.layers:
-            raise ValueError('Layer is not in model %s\'s layer list.' % model)
-        self.attached_to = model
-            
-    def forward_propagate(self, msg):
-        """Calculates activation of this layer given msg.
-        """
-        
-        raise NotImplementedError
-        
-    def back_propagate(self, msg):
-        """Updates delta, gradients, and error message to lower layers.
-        """
-        
-        raise NotImplementedError
-
-    def compute_reg_loss(self):
-        """Return penalty from regularization.
-        """
-        
-        raise NotImplementedError
-    
-    def build(self):
-        """Deploy this Layer and obtain actual memory.
-        """
-    
-        raise NotImplementedError
