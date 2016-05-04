@@ -20,7 +20,7 @@ class Optimizer(object):
         """Initialize a new Optimizer instance.
         """
         
-        self.n_iters = 0
+        raise NotImplementedError
     
     def reset(self):
         """Reset optimizer to initial state.
@@ -28,13 +28,13 @@ class Optimizer(object):
         This function is intended to be called everytime before training.
         """
         
-        self.n_iters = 0
+        raise NotImplementedError
         
-    def update(self, params, grads):
-        """Update parameters given their gradients.
+    def update(self, param, grad):
+        """Update parameter given their gradient.
         """
         
-        self.n_iters += 1
+        raise NotImplementedError
 
 class SGD(Optimizer):    
     """Stochastic Gradient Descent optimizer.
@@ -45,7 +45,6 @@ class SGD(Optimizer):
         """Initialize a new SgdOptimizer instance.
         """
         
-        super(type(self), self).__init__()
         self.init_lr = learning_rate
         self.decay_rate = decay_rate
         self.decay_period = decay_period
@@ -61,12 +60,11 @@ class SGD(Optimizer):
             return self.init_lr * (self.decay_rate ** 
                                     (self.n_iters // self.decay_period))
         
-    def update(self, params, grads):
-        """Update parameters given their gradients.
+    def update(self, param, grad):
+        """Update parameter given their gradient.
         """
         
-        super(type(self), self).update(params, grads)
-        params -= self.learning_rate * grads
+        param -= self.learning_rate * grad
         
 
 class Adagrad(Optimizer):    
@@ -78,18 +76,18 @@ class Adagrad(Optimizer):
         """Initialize a new SgdOptimizer instance.
         """
         
-        super(type(self), self).__init__()
         self.learning_rate = learning_rate
-        self._cache = None
+        self._cache = {}
         
-    def update(self, params, grads):
-        """Update parameters given their gradients.
+    def update(self, param, grad):
+        """Update parameter given their gradient.
         """
         
-        super(type(self), self).update(params, grads)
-        if self._cache is None:
-            self._cache = np.zeros(params.shape)
-            
-        self._cache += grads ** 2
-        params -= self.learning_rate * grads / np.sqrt(self._cache + 1e-8)
-
+        param_id = id(param)
+        cache = self._cache.get(param_id, None)
+        if cache is None:
+            cache = grad ** 2
+            self._cache[param_id] = cache
+        else:
+            cache += grad ** 2
+        param -= self.learning_rate * grad / np.sqrt(cache + 1e-8)

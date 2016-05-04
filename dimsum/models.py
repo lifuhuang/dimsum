@@ -2,8 +2,7 @@ import sys
 
 import numpy as np
 
-from .utils import ArrayPool
-from .layers import Layer
+from . import objectives
 
 class NeuralNetwork(object):
     """Base classes of all neural networks.
@@ -14,25 +13,8 @@ class NeuralNetwork(object):
         """Initialize a new instance of NeuralNetwork.
         """
         
-        self.params = None
-        self.grads = None
-        
-        self.layers = []      
-        
-        self._objective = objective
-        
-    def build(self):
-        """Deploy the neural network and allocate memory to layers.
-        """
-        
-        shapes = {}
-        for l in self.layers:        
-            shapes.update(l.param_shapes)
-            
-        self.params = ArrayPool(shapes)
-        self.grads = ArrayPool(shapes)
-        for layer in self.layers:
-            layer.build()
+        self.layers = []
+        self._objective = objectives.get(objective) or objective
 
     def predict(self, samples):
         """Return output of the network given input.
@@ -44,11 +26,7 @@ class NeuralNetwork(object):
         """Add a layer to this network.
         """
         
-        if isinstance(layer, Layer):
-            self.layers.append(layer)
-            layer.attach_to(self)
-        else:
-            raise ValueError('A Layer instance should be passed in.')
+        self.layers.append(layer)
 
     def fit(self, x, y, optimizer, n_epochs=5, batch_size=32,
             randomized=True, callbacks=[]):
@@ -68,15 +46,19 @@ class NeuralNetwork(object):
                 st = i % epoch_size
                 batch_indices = np.arange(st, st + batch_size)
                 
-            self.grads.reset()
             x_batch = x[batch_indices]
             y_batch = y[batch_indices]
+            self._reset_gradients()
             self._acc_gradients(x_batch, y_batch)
-            optimizer.update(self.params[:], self.grads[:])
+            for layer in self.layers:
+                for param, grad in zip(layer.get_params(), layer.get_grads()):
+                    optimizer.update(param, grad)
+                    
+            n_iters = i // batch_size + 1
             # call callbacks
             for callback, period in callbacks:
-                if optimizer.n_iters % period == 0:
-                    callback(locals())    
+                if  n_iters % period == 0:
+                    callback(locals())
         
     def compute_loss(self, x, y_true):
         """Compute loss for a batch of samples.
@@ -87,51 +69,57 @@ class NeuralNetwork(object):
         for layer in self.layers:
             msg = layer.forward_propagate(msg)
             reg_loss += layer.compute_reg_loss()
-        return reg_loss + self._objective.function(msg, y_true)
+        return reg_loss + self._objective.function(msg, y_true)    
     
     def save_params(self, path):
         """Save params to file.
         """
         
-        np.save(path, self.params)
+        params = []
+        for layer in self.layers:
+            params += layer.get_params()
+        np.savez(path, *params)
     
     def load_params(self, path):
         """Load saved params from file.
         """
         
-        self.params[:] = np.load(path)
+        params = np.load(path).items()
+        params.sort()
+        param_iter = iter(params)
+        for layer in self.layers:
+            for param in layer.get_params():
+                param[:] = next(param_iter)[1]
         
-    def grad_check(self, x, y, eps=1e-4, tol=1e-6,
-           outfd=sys.stderr, skiplist=[]):
+    def grad_check(self, x, y, eps=1e-6, tol=1e-7,
+           outfd=sys.stderr):
         """Check gradients on (x, y) using current params.
         """
         
-        self.grads.reset()
+        self._reset_gradients()
         self._acc_gradients(x, y)
         success = True
         
-        for name in self.params.names():
-            if name in skiplist: 
-                continue
-            print >> outfd, "Cheking dJ/d(%s)" % name,
-            theta = self.params.get(name)
-            grad_computed = self.grads.get(name)
-            grad_approx = np.zeros(theta.shape)
-            for idx, v in np.ndenumerate(theta):
-                t = theta[idx]
-                theta[idx] = t + eps
-                Jplus  = self.compute_loss(x, y)
-                theta[idx] = t - eps
-                Jminus = self.compute_loss(x, y)
-                theta[idx] = t
-                grad_approx[idx] = (Jplus - Jminus) / (2 * eps)
+        for i, layer in enumerate(self.layers):
+            print >> outfd, 'Layer %d:' % i
+            for param, grad in zip(layer.get_params(), layer.get_grads()):
+                grad_computed = grad
+                grad_approx = np.zeros(param.shape)
+                for idx, v in np.ndenumerate(param):
+                    t = param[idx]
+                    param[idx] = t + eps
+                    Jplus  = self.compute_loss(x, y)
+                    param[idx] = t - eps
+                    Jminus = self.compute_loss(x, y)
+                    param[idx] = t
+                    grad_approx[idx] = (Jplus - Jminus) / (2 * eps)
+                    
+                grad_delta = np.linalg.norm(grad_approx - grad_computed)
+                print >> outfd, "error norm = %.04g" % grad_delta,
+                print >> outfd, ("[ok]" if grad_delta < tol else "[ERROR]")
                 
-            grad_delta = np.linalg.norm(grad_approx - grad_computed)
-            print >> outfd, "error norm = %.04g" % grad_delta,
-            print >> outfd, ("[ok]" if grad_delta < tol else "[ERROR]")
-            
-            success &= (grad_delta < tol)
-        self.grads.reset()        
+                success &= (grad_delta < tol)
+        self._reset_gradients()        
         print >> outfd, "Result:", ("[Success]" if success else "[Failure]")
         return success
         
@@ -151,3 +139,7 @@ class NeuralNetwork(object):
         y_pred = self._forward_propagate(x)
         errors = self._objective.derivative(y_pred, y)
         self._back_propagate(errors)
+
+    def _reset_gradients(self):
+        for layer in self.layers:
+            layer.reset_grads()

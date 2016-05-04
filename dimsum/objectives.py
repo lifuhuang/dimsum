@@ -93,3 +93,12 @@ class MeanSquareError(Objective):
         
         assert(output.ndim == target.ndim == 2)
         return (output - target) / output.size
+        
+_objectives = {'mse': MeanSquareError,
+               'cee': CrossEntropy,
+               'bcee': BinaryCrossEntropy}
+def get(name):
+    """Return objective according to name.
+    """
+    
+    return _objectives.get(name, None)

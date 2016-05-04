@@ -115,3 +115,15 @@ class Identity(Activation):
         """
         
         return np.ones(y.shape)
+
+_activations = {'relu': ReLU,
+                'identity': Identity,
+                'sigmoid': Sigmoid,
+                'softmax': Softmax,
+                'tanh': Tanh}
+
+def get(name):
+    """Return activation according to name.
+    """
+    
+    return _activations.get(name, None)

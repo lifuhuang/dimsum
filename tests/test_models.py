@@ -7,11 +7,9 @@ Created on Sat Apr 23 23:27:21 2016
 
 import numpy as np
 
-from dimsum.layers import *
-from dimsum.activations import *
-from dimsum.objectives import *
-from dimsum.optimizers import *
-from dimsum.regularizers import *
+from dimsum.layers import Dense, Input
+from dimsum.optimizers import SGD
+from dimsum.regularizers import L2
 from dimsum.models import NeuralNetwork
 from dimsum import utils
 from dimsum import callbacks
@@ -20,78 +18,57 @@ class TestNeuralNetwork:
     """Test class for NeuralNetwork.
     """
     
-
+    
     def test_grad_check(self):
         """Perform gradient check.
         """
-        # Test classifier network
         
+        # Test classifier network
         # tanh multi-label classifier
-        model = NeuralNetwork(objective=BinaryCrossEntropy)
-        model.add(Input(20, name='layer0'))
-        model.add(Dense(30, name='layer1', activation=Tanh))
-        model.add(Dense(20, name='layer2', activation=Sigmoid))
-        model.build()
+        model = NeuralNetwork(objective='bcee')
+        model.add(Input(20))
+        model.add(Dense(20, 30, activation='tanh'))
+        model.add(Dense(30, 20, activation='sigmoid'))
         assert model.grad_check(np.random.randn(10, 20), 
                                 np.random.rand(10, 20))
                                 
         # logistic multi-class classifier with regularization               
-        model = NeuralNetwork(objective=CrossEntropy)
-        model.add(Input(20, name='layer0'))
-        model.add(Dense(30, name='layer1', 
-                             activation=Sigmoid, 
-                             W_regularizer=L2(0.1), 
-                             b_regularizer=L2(0.1)))
-        model.add(Dense(20, name='layer2', 
-                             activation=Softmax, 
-                             W_regularizer=L2(0.01), 
-                             b_regularizer=L2(0.01)))
-        model.build()
+        model = NeuralNetwork(objective='cee')
+        model.add(Input(20))
+        model.add(Dense(20, 30, activation='sigmoid', W_regularizer=L2(0.1), 
+                        b_regularizer=L2(0.1)))
+        model.add(Dense(30, 20, activation='softmax', W_regularizer=L2(0.01), 
+                        b_regularizer=L2(0.01)))
         assert model.grad_check(np.random.randn(10, 20), 
                                 utils.softmax(np.random.randn(10, 20)))
                                 
         # deep multi-class classifier
-        model = NeuralNetwork(objective=CrossEntropy)
-        model.add(Input(30, name='layer0'))
-        model.add(Dense(51, name='layer1', activation=Sigmoid))
-        model.add(Dense(50, name='layer2', 
-                             activation=Tanh, 
-                             W_regularizer=L2(0.1)))
-        model.add(Dense(49, name='layer3', 
-                             activation=ReLU, 
-                             W_regularizer=L2(0.1)))
-        model.add(Dense(52, name='layer4', 
-                             activation=Identity))        
-        model.add(Dense(30, name='layer5', 
-                             activation=Softmax))
-        model.build()
+        model = NeuralNetwork(objective='cee')
+        model.add(Input(30))
+        model.add(Dense(30, 51, activation='sigmoid'))
+        model.add(Dense(51, 50, activation='tanh', W_regularizer=L2(0.1)))
+        model.add(Dense(50, 49, activation='relu', W_regularizer=L2(0.1)))
+        model.add(Dense(49, 52, activation='identity'))
+        model.add(Dense(52, 30, activation='softmax'))
         assert model.grad_check(np.random.randn(10, 30), 
                                 utils.softmax(np.random.randn(10, 30)))
                                 
         # Test regression network
         # single-output regression
-        model = NeuralNetwork(objective=MeanSquareError)
-        model.add(Input(20, name='layer0'))
-        model.add(Dense(30, name='layer1', activation=ReLU))
-        model.add(Dense(30, name='layer2', activation=ReLU))
-        model.add(Dense(1, name='layer3', activation=ReLU))
-        model.build()
+        model = NeuralNetwork(objective='mse')
+        model.add(Input(20))
+        model.add(Dense(20, 30, activation='relu'))
+        model.add(Dense(30, 30, activation='relu'))
+        model.add(Dense(30, 1, activation='relu'))
         assert model.grad_check(np.random.randn(10, 20), 
                                 np.random.randn(10, 1))
         
         # multi-output regression                                
-        model = NeuralNetwork(objective=MeanSquareError)
-        model.add(Input(20, name='layer0'))
-        model.add(Dense(30, name='layer1', 
-                             activation=Tanh, 
-                             W_regularizer=L2(0.1)))        
-        model.add(Dense(30, name='layer2', 
-                             activation=Tanh, 
-                             W_regularizer=L2(0.1)))
-        model.add(Dense(10, name='layer3', 
-                             activation=Identity, 
-                             W_regularizer=L2(0.1)))
-        model.build()
+        model = NeuralNetwork(objective='mse')
+        model.add(Input(20))
+        model.add(Dense(20, 30, activation='tanh', W_regularizer=L2(0.1)))        
+        model.add(Dense(30, 30, activation='tanh', W_regularizer=L2(0.1)))
+        model.add(Dense(30, 10, activation='identity', W_regularizer=L2(0.1)))
         assert model.grad_check(np.random.randn(10, 20), 
                                 np.random.randn(10, 10))
         
@@ -99,12 +76,13 @@ class TestNeuralNetwork:
         """Sanity check with small amount of random date.
         """
         
-        model = NeuralNetwork(objective=CrossEntropy)
-        model.add(Input(30, name='layer0'))
-        model.add(Dense(100, name='layer1', activation=Tanh))
-        model.add(Dense(100, name='layer2', activation=Tanh))
-        model.add(Dense(2, name='layer4', activation=Softmax))
-        model.build()
+
+        
+        model = NeuralNetwork(objective='cee')
+        model.add(Input(30))
+        model.add(Dense(30, 100, activation='tanh'))
+        model.add(Dense(100, 100, activation='tanh'))
+        model.add(Dense(100, 2, activation='softmax'))
         
         x = np.random.randn(50, 30)
         y = utils.make_onehots(np.random.randint(0, 2, 50), (50, 2))

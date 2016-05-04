@@ -11,10 +11,8 @@ import numpy as np
 def get(name):
     """Return a array filler according to name.
     """
-        
-    if name not in _array_fillers:
-        raise ValueError('%s is not a valid filler' % name)
-    return _array_fillers[name]
+    
+    return _array_fillers.get(name, None)
 
 def _xavier_filler(weight):
     """Initialize array with Xavier method.

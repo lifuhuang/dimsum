@@ -17,39 +17,24 @@ class Layer(object):
     """
     
     
-    def __init__(self, size, name=None):
+    def __init__(self, input_dim, output_dim):
         """Initialize a new instance of Layer.
         
         Since Layer is a abstract class, this method should only be called by
         its derived classes.
         """
         
-        self.param_shapes = {}
-        self.size = size
-        self.attached_to = None
-        self.name = id(self) if name is None else name
-        
-    def attach_to(self, model):
-        """Attach this layer to a neural network model.
-        
-        This method can be overridden to specify operations to do when a layer
-        is added to a neural network model, such as setting param_shapes. Sub-
-        classes are supposed to call this in base class before doing their own
-        tasks.
-        """
-        
-        if self not in model.layers:
-            raise ValueError('Layer is not in model %s\'s layer list.' % model)
-        self.attached_to = model
+        self.input_dim = input_dim
+        self.output_dim = output_dim
             
     def forward_propagate(self, msg):
-        """Calculates activation of this layer given msg.
+        """Calculate output of this layer given msg.
         """
         
         raise NotImplementedError
         
     def back_propagate(self, msg):
-        """Updates delta, gradients, and error message to lower layers.
+        """Update gradients, and propagate error message to lower layers.
         """
         
         raise NotImplementedError
@@ -60,38 +45,68 @@ class Layer(object):
         
         raise NotImplementedError
     
-    def build(self):
-        """Deploy this Layer and obtain actual memory.
+    def get_params(self):
+        """Return a tuple of parameters.
         """
+        
+        raise NotImplementedError
+        
+    def get_grads(self):
+        """Return a tuple of gradients.
+        """
+        
+        raise NotImplementedError
     
+    def reset_grads(self):
+        """Reset all gradients to zeros.
+        """
+        
         raise NotImplementedError
 
 class Input(Layer):
     """Dumb layer with no parameters.
         """
     
+    def __init__(self, dim):
+        """
+        """
+        
+        super(type(self), self).__init__(dim, dim)
+        
     def forward_propagate(self, msg):
-        """Calculates activation of this layer given msg.
+        """Return input message without making any changes.
         """
         
         return msg
         
     def back_propagate(self, msg):
-        """Updates delta, gradients, and error message to lower layers.
+        """Return received message without making any changes.
         """
         
         return msg
 
     def compute_reg_loss(self):
-        """Return penalty from regularization.
+        """Return zero.
         """
         
         return 0.0
-        
-    def build(self):
-        """Deploy this Layer and obtain actual memory.
-        """
     
+    def get_params(self):
+        """Return an empty tuple.
+        """
+        
+        return tuple()
+        
+    def get_grads(self):
+        """Return an empty tuple.
+        """
+        
+        return tuple()
+    
+    def reset_grads(self):
+        """Do nothing.
+        """
+        
         pass
 
 class Dense(Layer):
@@ -99,40 +114,29 @@ class Dense(Layer):
     """
     
     
-    def __init__(self, size, name=None,
+    def __init__(self, input_dim, output_dim, 
                  W_init='xavier', b_init='constant', 
-                 W_regularizer=None, b_regularizer=None,
-                 activation=activations.Identity, bias=True):
+                 activation='identity', 
+                 W_regularizer=None, b_regularizer=None, bias=True):
         """Initialize a new instance of DenseLayer.
         """
         
-        # initialize base class
-        super(type(self), self).__init__(size, name)
+        super(type(self), self).__init__(input_dim, output_dim)
         
-        self._bias = bias
+        # public attributes
+        self.bias = bias
+        self.W = np.empty((self.input_dim, self.output_dim))
+        self.b = np.empty(self.output_dim) if self.bias else None
+        self.dW = np.zeros(self.W.shape)
+        self.db = np.zeros(self.b.shape) if self.bias else None
         
-        # parameters
-        self.W = None
-        self.dW = None
-        if self._bias:        
-            self.b = None  
-            self.db = None
+        self._W_init = initializations.get(W_init) or W_init
+        self._W_init(self.W)
+        self._b_init = initializations.get(b_init) or b_init
+        self._b_init(self.b)
         
-        # weight filler
-        if callable(W_init):
-            self._W_init = W_init
-        else:
-            self._W_init = initializations.get(W_init)
-            
-        # bias filler
-        if callable(b_init):
-            self._b_init = b_init
-        else:
-            self._b_init = initializations.get(b_init)
+        self._activation = activations.get(activation) or activation
         
-        self._activation = activation
-        
-        # regularizers
         self._W_reg = W_regularizer
         self._b_reg = b_regularizer
             
@@ -140,32 +144,38 @@ class Dense(Layer):
         self._input = None
         self._output = None    
     
-    def attach_to(self, model):
-        """Attach this layer to a neural network model.
+    def get_params(self):
+        """Return a tuple of parameters.
         """
         
-        super(type(self), self).attach_to(model)            
-        index = model.layers.index(self)
-        if index == 0:
-            raise ValueError('Input layer is needed before DenseLayer.')
-        prev_layer = model.layers[index - 1]
-        self.param_shapes['%s_W' % self.name] = (prev_layer.size, self.size)
-        if self._bias:
-            self.param_shapes['%s_b' % self.name] = (self.size,)
-                
+        return self.W, self.b
+        
+    def get_grads(self):
+        """Return a tuple of gradients.
+        """
+        
+        return self.dW, self.db
+    
+    def reset_grads(self):
+        """Reset dW and db to zeros.
+        """
+        
+        self.dW[:] = 0
+        self.db[:] = 0
+    
     def forward_propagate(self, msg):
-        """Calculates activation of this layer given msg.
+        """Calculate output of this layer given msg.
         """
         
         self._input = msg
         z = np.dot(msg, self.W)
-        if self._bias:
+        if self.bias:
             z += self.b
         self._output = self._activation.function(z)
         return self._output
         
     def back_propagate(self, msg):
-        """Updates delta, gradients, and error message to lower layers.
+        """Update gradients, and propagate error message to lower layers.
         """
         
         dfs = self._activation.derivative(self._output)
@@ -178,7 +188,7 @@ class Dense(Layer):
         if self._W_reg:
             self.dW += self._W_reg.derivative(self.W)
             
-        if self._bias:
+        if self.bias:
             self.db += np.sum(deltas, axis=0)
             if self._b_reg:
                 self.db += self._b_reg.derivative(self.b)
@@ -192,19 +202,7 @@ class Dense(Layer):
         loss = 0
         if self._W_reg is not None:
             loss += self._W_reg.function(self.W)
-        if self._bias and self._b_reg is not None:
+        if self.bias and self._b_reg is not None:
             loss += self._b_reg.function(self.b)
         return loss
         
-    def build(self):        
-        """Deploy this Layer and obtain actual memory.
-        """
-        
-        self.W = self.attached_to.params.get('%s_W' % self.name)
-        self._W_init(self.W)
-        self.dW = self.attached_to.grads.get('%s_W' % self.name)
-        
-        if self._bias:
-            self.b = self.attached_to.params.get('%s_b' % self.name)
-            self._b_init(self.b)
-            self.db = self.attached_to.grads.get('%s_b' % self.name)
