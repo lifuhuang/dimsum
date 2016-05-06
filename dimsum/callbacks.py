@@ -6,6 +6,9 @@ Created on Mon Apr 25 20:09:14 2016
 """
 
 import sys
+import os.path as op
+
+from . import utils
 
 class LossPrinter(object):
     """Output loss to console.
@@ -44,4 +47,22 @@ class IterationPrinter(object):
     
     def __call__(self, msg):
         print >> self._outfd, 'Iteration %d' % msg['n_iters']
+
+class CheckpointSaver(object):
+    """Save checkpoint.
+    """
     
+    
+    def __init__(self, path=None, verbose=False):
+        self._path = path
+        self._verbose = verbose
+        
+    def __call__(self, msg):
+        params = []
+        for layer in msg['model'].layers:
+            for param in layer.get_params():
+                params.append(param)
+        obj = {'params': params, 
+               'n_iters': msg['n_iters'],
+               'optimizer': msg['optimizer']}
+        utils.save_checkpoint(obj, self._path, verbose=self._verbose)

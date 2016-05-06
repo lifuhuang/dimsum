@@ -5,6 +5,11 @@ Created on Sat Apr 23 16:07:39 2016
 @author: lifu
 """
 
+import glob
+import os.path as op
+import time
+import cPickle as pickle
+
 import matplotlib.pyplot as plt 
 import numpy as np
 
@@ -130,3 +135,44 @@ class ArrayPool(object):
         idx = self._indices[name]
         return self._views[idx]
        
+    
+def save_checkpoint(obj, path=None, verbose=False):
+    """Save checkpoint to path.
+    """
+    
+    if path is None:
+        path = '.'
+    if op.isdir(path):
+        cp_path = op.join(path, 'checkpoint_%d' % time.time())
+    else:
+        cp_path = path
+        
+    with open(cp_path, 'w') as fp:
+        pickle.dump(obj, fp)
+    if verbose:
+        print '%s saved!' % cp_path
+        print obj['n_iters']
+        
+def load_checkpoint(path=None, verbose=False):
+    """Load checkpoint from path.
+    """
+
+    # default path is current directory    
+    if path is None:
+        path = '.'
+        
+    if op.isdir(path):
+        paths = glob.glob(op.join(path, 'checkpoint_*'))
+        if not paths:
+            return None
+        cp_path = max(paths, key=lambda p: int(p.split('_')[-1]))
+    elif op.isfile(path):
+        cp_path = path
+    else:
+        return None
+    
+    with open(cp_path, 'r') as fp:
+        obj = pickle.load(fp)
+    if verbose:
+        print '%s loaded!' % cp_path
+    return obj

@@ -3,6 +3,7 @@ import sys
 import numpy as np
 
 from . import objectives
+from . import utils
 
 class NeuralNetwork(object):
     """Base classes of all neural networks.
@@ -28,13 +29,29 @@ class NeuralNetwork(object):
         
         self.layers.append(layer)
 
-    def fit(self, x, y, optimizer, n_epochs=5, batch_size=32,
-            randomized=True, callbacks=[]):
+    def fit(self, x, y, n_epochs=5, batch_size=32, optimizer=None,
+            randomized=True, use_checkpoint=False, callbacks=[]):
         """Train this model using x and y.
         """
         
         assert x.shape[0] == y.shape[0]
         
+        n_iters = 0
+        
+        # load checkpoint if available
+        if use_checkpoint:
+            if use_checkpoint is True:
+                use_checkpoint = '.'
+            obj = utils.load_checkpoint(use_checkpoint, verbose=True)
+            if obj is not None:
+                optimizer = obj['optimizer']
+                n_iters = obj['n_iters']
+                params = obj['params']
+                param_iter = iter(params)
+                for layer in self.layers:
+                    for param in layer.get_params():
+                        param[:] = next(param_iter)      
+            
         # wrap current model into args passed to callbacks
         model = self
         epoch_size = x.shape[0]
@@ -54,7 +71,7 @@ class NeuralNetwork(object):
                 for param, grad in zip(layer.get_params(), layer.get_grads()):
                     optimizer.update(param, grad)
                     
-            n_iters = i // batch_size + 1
+            n_iters += 1
             # call callbacks
             for callback, period in callbacks:
                 if  n_iters % period == 0:
@@ -70,26 +87,6 @@ class NeuralNetwork(object):
             msg = layer.forward_propagate(msg)
             reg_loss += layer.compute_reg_loss()
         return reg_loss + self._objective.function(msg, y_true)    
-    
-    def save_params(self, path):
-        """Save params to file.
-        """
-        
-        params = []
-        for layer in self.layers:
-            params += layer.get_params()
-        np.savez(path, *params)
-    
-    def load_params(self, path):
-        """Load saved params from file.
-        """
-        
-        params = np.load(path).items()
-        params.sort()
-        param_iter = iter(params)
-        for layer in self.layers:
-            for param in layer.get_params():
-                param[:] = next(param_iter)[1]
         
     def grad_check(self, x, y, eps=1e-6, tol=1e-7,
            outfd=sys.stderr):
